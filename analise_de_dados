@@ -1,0 +1,82 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import os
+
+# Configurar estilo dos gráficos
+plt.style.use('default')
+plt.rcParams['figure.figsize'] = (10, 6)
+
+# --- fase 1: preparacao dos dados ---
+# carregando os dados brutos gerados no meu laboratorio
+tabela = pd.read_csv('dados_cancelamento_pme.csv')
+
+# removendo informacoes que nao agregam na analise comportamental
+tabela = tabela.drop(columns='id_cliente')
+
+# removendo registros vazios para garantir a integridade da estatistica
+tabela = tabela.dropna()
+
+# --- fase 2: exploracao e diagnostico ---
+# verificando o percentual de clientes que deixaram a empresa
+print("taxa de cancelamento identificada:")
+print(tabela['cancelou'].value_counts(normalize=True))
+print("\n")
+
+# --- fase 3: visualizacao de padroes ---
+# vou gerar graficos para cada variavel para entender o que motiva o cancelamento
+# usando matplotlib para visualizar direto no terminal
+
+for coluna in tabela.columns:
+    if coluna != 'cancelou':
+        # Criar figura com subplots
+        fig, ax = plt.subplots()
+        
+        # Separar dados por cancelamento
+        cancelou = tabela[tabela['cancelou'] == 1][coluna]
+        nao_cancelou = tabela[tabela['cancelou'] == 0][coluna]
+        
+        # Criar histograma agrupado
+        ax.hist([nao_cancelou, cancelou], label=['Ativo', 'Cancelou'], color=['navy', 'orange'])
+        ax.set_xlabel(coluna)
+        ax.set_ylabel('Quantidade')
+        ax.set_title(f'Impacto de {coluna} no cancelamento')
+        ax.legend()
+        ax.grid(axis='y', alpha=0.3)
+        
+        print(f"\n✓ Exibindo gráfico: {coluna}")
+        plt.show()
+
+# --- Gráfico de resumo: Taxa de cancelamento geral ---
+print("\nGerando gráfico de resumo...")
+fig, ax = plt.subplots(figsize=(8, 6))
+
+resumo = tabela['cancelou'].value_counts()
+cores = ['navy', 'orange']
+labels = ['Ativo', 'Cancelou']
+
+wedges, texts, autotexts = ax.pie(
+    resumo.values, 
+    labels=labels, 
+    autopct='%1.1f%%',
+    colors=cores,
+    startangle=90
+)
+
+# Melhorar formatação do pie chart
+for autotext in autotexts:
+    autotext.set_color('white')
+    autotext.set_fontsize(12)
+    autotext.set_weight('bold')
+
+ax.set_title('Distribuição de Clientes: Ativos vs Cancelados', fontsize=14, fontweight='bold')
+print("✓ Exibindo gráfico de resumo...")
+plt.show()
+
+# --- fase 4: teste de hipotese ---
+# percebi que o suporte alto gera muito cancelamento. 
+# vou filtrar a base para ver a taxa de cancelamento em clientes com menos de 3 ligacoes
+print("\ntaxa de cancelamento em clientes com baixo volume de suporte:")
+tabela_eficiente = tabela[tabela['ligacoes_suporte'] < 3]
+print(tabela_eficiente['cancelou'].value_counts(normalize=True))
+
+print("\n✓ Análise finalizada! Os gráficos foram exportados e exibidos.")
